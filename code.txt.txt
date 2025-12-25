@@ -1,76 +1,27 @@
 交通流量预测：
-import csv
+import pandas as pd
 import matplotlib.pyplot as plt
-from geopy.distance import geodesic
+from datetime import datetime
+import numpy as np
 
-with open('$GNRMC.csv', 'r', encoding='UTF - 8', newline='') as csvfile:
-    reader = csv.reader(csvfile)
-    coordinates = []
-    locations = []
-    total_distance = 0
-    next(reader)
-    for row in reader:
-        if row and row[0] == '$GNRMC':
-            x = float(row[3])
-            y = float(row[5])
-            coordinates.append((x, y))
-            time = row[1]
-            lat = row[3]
-            lon = row[5]
-            year = row[9]
+df = pd.read_csv('sample_traffic_data.csv', encoding='utf-8')
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+df.set_index('timestamp', inplace=True)
 
-            h = int(time[:2]) + 8
-            m = time[2:4]
-            s = time[4:6]
+daily_summary = df['traffic_volume'].resample('D').agg(['sum', 'mean', 'max', 'min'])
+daily_summary.columns = ['total_volume', 'average_volume', 'max_volume', 'min_volume']
+daily_summary.reset_index(inplace=True)
+daily_summary['date'] = daily_summary['timestamp'].dt.strftime('%Y-%m-%d')
+daily_summary.to_csv('daily_traffic_summary.csv', index=False, encoding='utf-8')
 
-            print(f"Time:{h}时{m}分{s}秒")
-
-            Y = year[4:6]
-            M = year[2:4]
-            D = year[0:2]
-
-            print(f"Day:{Y}年{M}月{D}日")
-
-            la_ds = float(lat[:2])
-            la_m = float(lat[2:])
-            la_d = la_ds + la_m / 60
-
-            lo_ds = float(lon[:3])
-            lo_m = float(lon[3:])
-            lo_d = lo_ds + lo_m / 60
-
-            print(f"小数形式:纬度{la_d:.6f}*经度{lo_d:.6f}")
-
-            locations.append((la_d, lo_d))
-
-            la_ds = int(la_d)
-            la_m = int((la_d - la_ds) * 60)
-            la_s = ((la_d - la_ds) * 60 - la_m) * 60
-            la_dms = f"{la_ds}°{la_m}'{la_s:.6f}\""
-
-            lo_ds = int(lo_d)
-            lo_m = int((lo_d - lo_ds) * 60)
-            lo_s = ((lo_d - lo_ds) * 60 - lo_m) * 60
-            lo_dms = f"{lo_ds}°{lo_m}'{lo_s:.6f}\""
-
-            print("度分秒形式:", "纬度", la_dms, "经度", lo_dms)
-num_points = len(locations)
-for i in range(num_points - 1):
-    start_point = locations[i]
-    end_point = locations[i + 1]
-    segment_distance = geodesic(*args:start_point, end_point).km
-    total_distance += segment_distance
-print("路径总距离为:", total_distance, "千米")
-
-x_coords = [point[0] for point in coordinates]
-y_coords = [point[1] for point in coordinates]
-plt.plot(*args:x_coords, y_coords, color='yellow')
-plt.scatter(x_coords[0], y_coords[0], c='green', s=100, marker='^')
-plt.scatter(x_coords[-1], y_coords[-1], c='red', s=100, marker='^')
-plt.title('Trajectory of Points')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.savefig('trajectory_plot.png')
+plt.figure(figsize=(12, 6))
+plt.plot(daily_summary['date'], daily_summary['total_volume'], marker='o', linestyle='-', color='b')
+plt.title('Daily Traffic Volume')
+plt.xlabel('Date')
+plt.ylabel('Total Traffic Volume')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('daily_traffic_plot.png')
 plt.show()
 经纬度
 
